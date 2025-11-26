@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding Transformer Attention · SumMi</title>
+    <style>
+        /* ═══════════════════════════════════════════════════════════
+           Article Page - ChatGPT-inspired Design
+           ═══════════════════════════════════════════════════════════ */
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f7f7f8;
+            --bg-tertiary: #ececec;
+            --text-primary: #0d0d0d;
+            --text-secondary: #6e6e80;
+            --text-tertiary: #8e8ea0;
+            --border-color: #e5e5e5;
+            --accent: #0d0d0d;
+            --card-bg: rgba(255, 255, 255, 0.8);
+            --code-bg: #f6f8fa;
+            --blur: 20px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-primary: #0d0d0d;
+                --bg-secondary: #1a1a1a;
+                --bg-tertiary: #2a2a2a;
+                --text-primary: #ececec;
+                --text-secondary: #9a9a9a;
+                --text-tertiary: #6e6e6e;
+                --border-color: #2a2a2a;
+                --accent: #ffffff;
+                --card-bg: rgba(26, 26, 26, 0.8);
+                --code-bg: #1e1e1e;
+            }
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.8;
+            min-height: 100vh;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            padding: 16px 24px;
+            background: var(--card-bg);
+            backdrop-filter: blur(var(--blur));
+            -webkit-backdrop-filter: blur(var(--blur));
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .nav-content {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover {
+            color: var(--text-primary);
+        }
+
+        .back-link svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .logo {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+
+        /* Article Container */
+        .article-container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 120px 24px 80px;
+        }
+
+        /* Article Header */
+        .article-header {
+            margin-bottom: 48px;
+            padding-bottom: 32px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: var(--text-tertiary);
+        }
+
+        .article-date {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .article-tags {
+            display: flex;
+            gap: 8px;
+        }
+
+        .tag {
+            font-size: 12px;
+            padding: 4px 10px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            color: var(--text-secondary);
+        }
+
+        .article-title {
+            font-size: 36px;
+            font-weight: 600;
+            line-height: 1.3;
+            margin-bottom: 16px;
+            letter-spacing: -0.5px;
+        }
+
+        .article-subtitle {
+            font-size: 18px;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        /* Article Content */
+        .article-content {
+            font-size: 17px;
+            line-height: 1.9;
+        }
+
+        .article-content h2 {
+            font-size: 24px;
+            font-weight: 600;
+            margin: 48px 0 20px;
+            letter-spacing: -0.3px;
+        }
+
+        .article-content h3 {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 36px 0 16px;
+        }
+
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+
+        .article-content a {
+            color: var(--text-primary);
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+
+        .article-content a:hover {
+            opacity: 0.7;
+        }
+
+        .article-content ul,
+        .article-content ol {
+            margin: 20px 0;
+            padding-left: 24px;
+        }
+
+        .article-content li {
+            margin-bottom: 10px;
+        }
+
+        .article-content blockquote {
+            margin: 28px 0;
+            padding: 20px 24px;
+            background: var(--bg-secondary);
+            border-left: 3px solid var(--text-tertiary);
+            border-radius: 0 8px 8px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        .article-content code {
+            font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+            padding: 2px 6px;
+            background: var(--code-bg);
+            border-radius: 4px;
+        }
+
+        .article-content pre {
+            margin: 24px 0;
+            padding: 20px;
+            background: var(--code-bg);
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        .article-content pre code {
+            padding: 0;
+            background: none;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .article-content img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin: 28px 0;
+        }
+
+        .article-content hr {
+            border: none;
+            height: 1px;
+            background: var(--border-color);
+            margin: 48px 0;
+        }
+
+        /* Math formula placeholder */
+        .formula {
+            display: block;
+            text-align: center;
+            padding: 24px;
+            margin: 24px 0;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            font-family: 'SF Mono', monospace;
+            font-size: 15px;
+            overflow-x: auto;
+        }
+
+        /* Article Footer */
+        .article-footer {
+            margin-top: 60px;
+            padding-top: 32px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .author-card {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            padding: 24px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+        }
+
+        .author-avatar {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .author-info h4 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .author-info p {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* Navigation between posts */
+        .post-navigation {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 32px;
+            gap: 16px;
+        }
+
+        .post-nav-link {
+            flex: 1;
+            padding: 20px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .post-nav-link:hover {
+            border-color: var(--text-tertiary);
+        }
+
+        .post-nav-link.next {
+            text-align: right;
+        }
+
+        .post-nav-label {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .post-nav-title {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 40px 24px;
+            border-top: 1px solid var(--border-color);
+            margin-top: 60px;
+        }
+
+        footer p {
+            font-size: 13px;
+            color: var(--text-tertiary);
+        }
+
+        footer .secret {
+            margin-top: 8px;
+            font-size: 12px;
+            opacity: 0.5;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .article-title {
+                font-size: 28px;
+            }
+
+            .article-content {
+                font-size: 16px;
+            }
+
+            .post-navigation {
+                flex-direction: column;
+            }
+
+            .post-nav-link.next {
+                text-align: left;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-content">
+            <a href="../index.html" class="back-link">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+                Back to home
+            </a>
+            <a href="../index.html" class="logo">SumMi</a>
+        </div>
+    </nav>
+
+    <!-- Article -->
+    <article class="article-container">
+
+        <!-- Header -->
+        <header class="article-header">
+            <div class="article-meta">
+                <span class="article-date">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    November 26, 2024
+                </span>
+                <span>·</span>
+                <span>8 min read</span>
+            </div>
+            <h1 class="article-title">Understanding Transformer Attention</h1>
+            <p class="article-subtitle">A deep dive into the self-attention mechanism that powers modern language models. From theory to implementation.</p>
+            <div class="article-tags" style="margin-top: 20px;">
+                <span class="tag">deep-learning</span>
+                <span class="tag">nlp</span>
+                <span class="tag">transformer</span>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="article-content">
+
+            <p>The Transformer architecture, introduced in the landmark paper "Attention Is All You Need" (2017), has revolutionized natural language processing and beyond. At its core lies the <strong>self-attention mechanism</strong> — a elegant solution that allows models to weigh the importance of different parts of the input when processing each element.</p>
+
+            <h2>Why Attention Matters</h2>
+
+            <p>Before Transformers, sequence models like RNNs and LSTMs processed tokens sequentially. This created two major problems:</p>
+
+            <ul>
+                <li><strong>Long-range dependencies</strong> — Information from early tokens had to pass through many steps to reach later ones, often getting diluted.</li>
+                <li><strong>Sequential bottleneck</strong> — Processing couldn't be parallelized, making training slow.</li>
+            </ul>
+
+            <p>Attention solves both problems by allowing each token to directly attend to every other token in the sequence.</p>
+
+            <h2>The Math Behind Self-Attention</h2>
+
+            <p>Self-attention operates on three matrices derived from the input: <strong>Query (Q)</strong>, <strong>Key (K)</strong>, and <strong>Value (V)</strong>.</p>
+
+            <div class="formula">
+                Attention(Q, K, V) = softmax(QK<sup>T</sup> / √d<sub>k</sub>) · V
+            </div>
+
+            <p>Let's break this down:</p>
+
+            <ol>
+                <li><strong>QK<sup>T</sup></strong> — Compute similarity scores between all query-key pairs</li>
+                <li><strong>/ √d<sub>k</sub></strong> — Scale by the square root of key dimension to prevent extreme softmax values</li>
+                <li><strong>softmax</strong> — Normalize to get attention weights (probabilities)</li>
+                <li><strong>· V</strong> — Weighted sum of values based on attention weights</li>
+            </ol>
+
+            <h2>Implementation in Python</h2>
+
+            <p>Here's a minimal implementation of scaled dot-product attention:</p>
+
+            <pre><code>import torch
+import torch.nn.functional as F
+
+def scaled_dot_product_attention(Q, K, V, mask=None):
+    """
+    Q, K, V: (batch, seq_len, d_k)
+    """
+    d_k = Q.size(-1)
+
+    # Compute attention scores
+    scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(d_k)
+
+    # Apply mask (optional, for decoder)
+    if mask is not None:
+        scores = scores.masked_fill(mask == 0, -1e9)
+
+    # Softmax to get attention weights
+    attention_weights = F.softmax(scores, dim=-1)
+
+    # Weighted sum of values
+    output = torch.matmul(attention_weights, V)
+
+    return output, attention_weights</code></pre>
+
+            <h2>Multi-Head Attention</h2>
+
+            <p>Instead of performing a single attention function, Transformers use <strong>multi-head attention</strong> — running multiple attention operations in parallel with different learned projections.</p>
+
+            <blockquote>
+                "Multi-head attention allows the model to jointly attend to information from different representation subspaces at different positions."
+                <br>— Vaswani et al., 2017
+            </blockquote>
+
+            <p>Each "head" can learn to focus on different aspects: one might capture syntactic relationships, another semantic similarities, and so on.</p>
+
+            <h2>Visualizing Attention</h2>
+
+            <p>One of the beautiful aspects of attention is its interpretability. We can visualize what the model is "looking at" when processing each token. For example, when processing the word "it" in a sentence, attention weights often highlight the noun that "it" refers to.</p>
+
+            <hr>
+
+            <h2>Key Takeaways</h2>
+
+            <ul>
+                <li>Self-attention enables direct connections between all positions in a sequence</li>
+                <li>The Query-Key-Value framework provides a flexible way to compute relevance</li>
+                <li>Scaling by √d<sub>k</sub> is crucial for stable training</li>
+                <li>Multi-head attention captures different types of relationships</li>
+            </ul>
+
+            <p>Understanding attention is fundamental to working with modern AI systems. Whether you're fine-tuning LLMs, building RAG systems, or developing new architectures, these concepts form the foundation.</p>
+
+            <p>In the next post, we'll explore how attention is used in the full Transformer architecture and dive into positional encodings.</p>
+
+        </div>
+
+        <!-- Footer -->
+        <footer class="article-footer">
+
+            <div class="author-card">
+                <div class="author-avatar">✦</div>
+                <div class="author-info">
+                    <h4>SumMi</h4>
+                    <p>AI enthusiast exploring the boundaries of machine intelligence.</p>
+                </div>
+            </div>
+
+            <div class="post-navigation">
+                <a href="#" class="post-nav-link prev" style="visibility: hidden;">
+                    <div class="post-nav-label">← Previous</div>
+                    <div class="post-nav-title">Previous Post</div>
+                </a>
+                <a href="llm-fine-tuning.html" class="post-nav-link next">
+                    <div class="post-nav-label">Next →</div>
+                    <div class="post-nav-title">Fine-tuning LLMs: A Practical Guide</div>
+                </a>
+            </div>
+
+        </footer>
+
+    </article>
+
+    <!-- Site Footer -->
+    <footer>
+        <p>© 2024 SumMi · Exploring AI</p>
+        <p class="secret">Loving you is a lonely secret.</p>
+    </footer>
+
+</body>
+</html>

@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fine-tuning LLMs: A Practical Guide · SumMi</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f7f7f8;
+            --bg-tertiary: #ececec;
+            --text-primary: #0d0d0d;
+            --text-secondary: #6e6e80;
+            --text-tertiary: #8e8ea0;
+            --border-color: #e5e5e5;
+            --accent: #0d0d0d;
+            --card-bg: rgba(255, 255, 255, 0.8);
+            --code-bg: #f6f8fa;
+            --blur: 20px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-primary: #0d0d0d;
+                --bg-secondary: #1a1a1a;
+                --bg-tertiary: #2a2a2a;
+                --text-primary: #ececec;
+                --text-secondary: #9a9a9a;
+                --text-tertiary: #6e6e6e;
+                --border-color: #2a2a2a;
+                --accent: #ffffff;
+                --card-bg: rgba(26, 26, 26, 0.8);
+                --code-bg: #1e1e1e;
+            }
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.8;
+            min-height: 100vh;
+        }
+
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            padding: 16px 24px;
+            background: var(--card-bg);
+            backdrop-filter: blur(var(--blur));
+            -webkit-backdrop-filter: blur(var(--blur));
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .nav-content {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover { color: var(--text-primary); }
+        .back-link svg { width: 16px; height: 16px; }
+
+        .logo {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+
+        .article-container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 120px 24px 80px;
+        }
+
+        .article-header {
+            margin-bottom: 48px;
+            padding-bottom: 32px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: var(--text-tertiary);
+        }
+
+        .article-date {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .article-tags {
+            display: flex;
+            gap: 8px;
+        }
+
+        .tag {
+            font-size: 12px;
+            padding: 4px 10px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            color: var(--text-secondary);
+        }
+
+        .article-title {
+            font-size: 36px;
+            font-weight: 600;
+            line-height: 1.3;
+            margin-bottom: 16px;
+            letter-spacing: -0.5px;
+        }
+
+        .article-subtitle {
+            font-size: 18px;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .article-content {
+            font-size: 17px;
+            line-height: 1.9;
+        }
+
+        .article-content h2 {
+            font-size: 24px;
+            font-weight: 600;
+            margin: 48px 0 20px;
+            letter-spacing: -0.3px;
+        }
+
+        .article-content h3 {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 36px 0 16px;
+        }
+
+        .article-content p {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+
+        .article-content ul, .article-content ol {
+            margin: 20px 0;
+            padding-left: 24px;
+        }
+
+        .article-content li { margin-bottom: 10px; }
+
+        .article-content blockquote {
+            margin: 28px 0;
+            padding: 20px 24px;
+            background: var(--bg-secondary);
+            border-left: 3px solid var(--text-tertiary);
+            border-radius: 0 8px 8px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        .article-content code {
+            font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+            padding: 2px 6px;
+            background: var(--code-bg);
+            border-radius: 4px;
+        }
+
+        .article-content pre {
+            margin: 24px 0;
+            padding: 20px;
+            background: var(--code-bg);
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        .article-content pre code {
+            padding: 0;
+            background: none;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .article-content hr {
+            border: none;
+            height: 1px;
+            background: var(--border-color);
+            margin: 48px 0;
+        }
+
+        .comparison-table {
+            width: 100%;
+            margin: 24px 0;
+            border-collapse: collapse;
+            font-size: 15px;
+        }
+
+        .comparison-table th, .comparison-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .comparison-table th {
+            background: var(--bg-secondary);
+            font-weight: 600;
+        }
+
+        .article-footer {
+            margin-top: 60px;
+            padding-top: 32px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .author-card {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            padding: 24px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+        }
+
+        .author-avatar {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .author-info h4 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .author-info p {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .post-navigation {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 32px;
+            gap: 16px;
+        }
+
+        .post-nav-link {
+            flex: 1;
+            padding: 20px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .post-nav-link:hover { border-color: var(--text-tertiary); }
+        .post-nav-link.next { text-align: right; }
+
+        .post-nav-label {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .post-nav-title {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 24px;
+            border-top: 1px solid var(--border-color);
+            margin-top: 60px;
+        }
+
+        footer p {
+            font-size: 13px;
+            color: var(--text-tertiary);
+        }
+
+        footer .secret {
+            margin-top: 8px;
+            font-size: 12px;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 768px) {
+            .article-title { font-size: 28px; }
+            .article-content { font-size: 16px; }
+            .post-navigation { flex-direction: column; }
+            .post-nav-link.next { text-align: left; }
+            .comparison-table { font-size: 13px; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="nav-content">
+            <a href="../index.html" class="back-link">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+                Back to home
+            </a>
+            <a href="../index.html" class="logo">SumMi</a>
+        </div>
+    </nav>
+
+    <article class="article-container">
+
+        <header class="article-header">
+            <div class="article-meta">
+                <span class="article-date">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    November 19, 2024
+                </span>
+                <span>·</span>
+                <span>12 min read</span>
+            </div>
+            <h1 class="article-title">Fine-tuning LLMs: A Practical Guide</h1>
+            <p class="article-subtitle">Everything I learned about LoRA, QLoRA, and efficient fine-tuning techniques for large language models.</p>
+            <div class="article-tags" style="margin-top: 20px;">
+                <span class="tag">llm</span>
+                <span class="tag">tutorial</span>
+                <span class="tag">fine-tuning</span>
+            </div>
+        </header>
+
+        <div class="article-content">
+
+            <p>Fine-tuning large language models has become significantly more accessible thanks to parameter-efficient techniques. In this guide, I'll share practical insights from my experience fine-tuning models ranging from 7B to 70B parameters.</p>
+
+            <h2>Why Fine-tune?</h2>
+
+            <p>While pre-trained models like GPT-4 or Claude are incredibly capable, fine-tuning offers several advantages:</p>
+
+            <ul>
+                <li><strong>Domain expertise</strong> — Teach the model specialized knowledge</li>
+                <li><strong>Style control</strong> — Make outputs match your desired tone and format</li>
+                <li><strong>Cost efficiency</strong> — Smaller fine-tuned models can outperform larger general ones</li>
+                <li><strong>Privacy</strong> — Keep sensitive data in-house</li>
+            </ul>
+
+            <h2>Full Fine-tuning vs. Parameter-Efficient Methods</h2>
+
+            <p>The traditional approach updates all model parameters, but this requires massive compute resources. Modern techniques update only a tiny fraction of parameters while achieving similar results.</p>
+
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Parameters</th>
+                        <th>Memory</th>
+                        <th>Quality</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Full Fine-tuning</td>
+                        <td>100%</td>
+                        <td>Very High</td>
+                        <td>Best</td>
+                    </tr>
+                    <tr>
+                        <td>LoRA</td>
+                        <td>0.1-1%</td>
+                        <td>Medium</td>
+                        <td>Near Best</td>
+                    </tr>
+                    <tr>
+                        <td>QLoRA</td>
+                        <td>0.1-1%</td>
+                        <td>Low</td>
+                        <td>Good</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>Understanding LoRA</h2>
+
+            <p><strong>Low-Rank Adaptation (LoRA)</strong> works by freezing the pre-trained weights and injecting trainable low-rank matrices into each layer.</p>
+
+            <p>The key insight is that the weight updates during fine-tuning have low "intrinsic rank" — meaning they can be approximated by much smaller matrices.</p>
+
+            <blockquote>
+                "We hypothesize that the change in weights during model adaptation also has a low 'intrinsic rank'."
+                <br>— Hu et al., LoRA paper
+            </blockquote>
+
+            <h3>Key Parameters</h3>
+
+            <ul>
+                <li><code>r</code> (rank) — Dimension of the low-rank matrices. Higher = more capacity but more memory. Start with 8-16.</li>
+                <li><code>alpha</code> — Scaling factor. Common practice: set to 2x rank.</li>
+                <li><code>target_modules</code> — Which layers to apply LoRA. Usually attention layers (<code>q_proj, k_proj, v_proj, o_proj</code>).</li>
+            </ul>
+
+            <h2>Practical Implementation</h2>
+
+            <p>Here's a minimal example using the <code>peft</code> library:</p>
+
+            <pre><code>from peft import LoraConfig, get_peft_model
+from transformers import AutoModelForCausalLM
+
+# Load base model
+model = AutoModelForCausalLM.from_pretrained(
+    "meta-llama/Llama-2-7b-hf",
+    torch_dtype=torch.float16,
+    device_map="auto"
+)
+
+# Configure LoRA
+lora_config = LoraConfig(
+    r=16,
+    lora_alpha=32,
+    target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+    lora_dropout=0.05,
+    bias="none",
+    task_type="CAUSAL_LM"
+)
+
+# Apply LoRA
+model = get_peft_model(model, lora_config)
+model.print_trainable_parameters()
+# Output: trainable params: 4,194,304 || all params: 6,742,609,920 || trainable%: 0.062</code></pre>
+
+            <h2>QLoRA: Going Even Smaller</h2>
+
+            <p><strong>QLoRA</strong> combines LoRA with 4-bit quantization, dramatically reducing memory requirements. This makes it possible to fine-tune a 70B model on a single GPU!</p>
+
+            <pre><code>from transformers import BitsAndBytesConfig
+
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=torch.float16,
+    bnb_4bit_use_double_quant=True
+)
+
+model = AutoModelForCausalLM.from_pretrained(
+    "meta-llama/Llama-2-70b-hf",
+    quantization_config=bnb_config,
+    device_map="auto"
+)</code></pre>
+
+            <h2>Tips from Experience</h2>
+
+            <ol>
+                <li><strong>Data quality > quantity</strong> — 1000 high-quality examples often beat 10000 noisy ones</li>
+                <li><strong>Start small</strong> — Prototype with a 7B model before scaling up</li>
+                <li><strong>Learning rate matters</strong> — Use 1e-4 to 2e-4 for LoRA, lower for full fine-tuning</li>
+                <li><strong>Monitor loss carefully</strong> — Overfitting happens fast with small datasets</li>
+                <li><strong>Evaluate on real tasks</strong> — Loss alone doesn't tell the full story</li>
+            </ol>
+
+            <hr>
+
+            <h2>Conclusion</h2>
+
+            <p>Parameter-efficient fine-tuning has democratized LLM customization. With techniques like LoRA and QLoRA, you can adapt state-of-the-art models to your specific needs without breaking the bank on compute.</p>
+
+            <p>Next up: We'll explore when to use RAG vs fine-tuning for different use cases.</p>
+
+        </div>
+
+        <footer class="article-footer">
+
+            <div class="author-card">
+                <div class="author-avatar">✦</div>
+                <div class="author-info">
+                    <h4>SumMi</h4>
+                    <p>AI enthusiast exploring the boundaries of machine intelligence.</p>
+                </div>
+            </div>
+
+            <div class="post-navigation">
+                <a href="transformer-attention.html" class="post-nav-link prev">
+                    <div class="post-nav-label">← Previous</div>
+                    <div class="post-nav-title">Understanding Transformer Attention</div>
+                </a>
+                <a href="rag-vs-finetuning.html" class="post-nav-link next">
+                    <div class="post-nav-label">Next →</div>
+                    <div class="post-nav-title">RAG vs Fine-tuning: When to Use What</div>
+                </a>
+            </div>
+
+        </footer>
+
+    </article>
+
+    <footer>
+        <p>© 2024 SumMi · Exploring AI</p>
+        <p class="secret">Loving you is a lonely secret.</p>
+    </footer>
+
+</body>
+</html>

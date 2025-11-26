@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG vs Fine-tuning: When to Use What · SumMi</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f7f7f8;
+            --bg-tertiary: #ececec;
+            --text-primary: #0d0d0d;
+            --text-secondary: #6e6e80;
+            --text-tertiary: #8e8ea0;
+            --border-color: #e5e5e5;
+            --card-bg: rgba(255, 255, 255, 0.8);
+            --code-bg: #f6f8fa;
+            --blur: 20px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-primary: #0d0d0d;
+                --bg-secondary: #1a1a1a;
+                --bg-tertiary: #2a2a2a;
+                --text-primary: #ececec;
+                --text-secondary: #9a9a9a;
+                --text-tertiary: #6e6e6e;
+                --border-color: #2a2a2a;
+                --card-bg: rgba(26, 26, 26, 0.8);
+                --code-bg: #1e1e1e;
+            }
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.8;
+            min-height: 100vh;
+        }
+
+        nav {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 100;
+            padding: 16px 24px;
+            background: var(--card-bg);
+            backdrop-filter: blur(var(--blur));
+            -webkit-backdrop-filter: blur(var(--blur));
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .nav-content {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover { color: var(--text-primary); }
+        .back-link svg { width: 16px; height: 16px; }
+
+        .logo {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+
+        .article-container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 120px 24px 80px;
+        }
+
+        .article-header {
+            margin-bottom: 48px;
+            padding-bottom: 32px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: var(--text-tertiary);
+        }
+
+        .article-date { display: flex; align-items: center; gap: 6px; }
+
+        .tag {
+            font-size: 12px;
+            padding: 4px 10px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            color: var(--text-secondary);
+        }
+
+        .article-title {
+            font-size: 36px;
+            font-weight: 600;
+            line-height: 1.3;
+            margin-bottom: 16px;
+            letter-spacing: -0.5px;
+        }
+
+        .article-subtitle {
+            font-size: 18px;
+            color: var(--text-secondary);
+        }
+
+        .article-content { font-size: 17px; line-height: 1.9; }
+        .article-content h2 { font-size: 24px; font-weight: 600; margin: 48px 0 20px; }
+        .article-content h3 { font-size: 20px; font-weight: 600; margin: 36px 0 16px; }
+        .article-content p { margin-bottom: 20px; }
+        .article-content ul, .article-content ol { margin: 20px 0; padding-left: 24px; }
+        .article-content li { margin-bottom: 10px; }
+
+        .article-content blockquote {
+            margin: 28px 0;
+            padding: 20px 24px;
+            background: var(--bg-secondary);
+            border-left: 3px solid var(--text-tertiary);
+            border-radius: 0 8px 8px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        .article-content hr {
+            border: none;
+            height: 1px;
+            background: var(--border-color);
+            margin: 48px 0;
+        }
+
+        .comparison-card {
+            padding: 24px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            margin: 24px 0;
+        }
+
+        .comparison-card h4 {
+            font-size: 18px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .comparison-card ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .decision-flow {
+            padding: 24px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            margin: 24px 0;
+            text-align: center;
+        }
+
+        .decision-flow p {
+            margin-bottom: 12px;
+            font-size: 15px;
+        }
+
+        .decision-flow strong {
+            color: var(--text-primary);
+        }
+
+        .article-footer {
+            margin-top: 60px;
+            padding-top: 32px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .author-card {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            padding: 24px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+        }
+
+        .author-avatar {
+            width: 56px; height: 56px;
+            background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .author-info h4 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+        .author-info p { font-size: 14px; color: var(--text-secondary); }
+
+        .post-navigation {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 32px;
+            gap: 16px;
+        }
+
+        .post-nav-link {
+            flex: 1;
+            padding: 20px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .post-nav-link:hover { border-color: var(--text-tertiary); }
+        .post-nav-link.next { text-align: right; }
+
+        .post-nav-label {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .post-nav-title { font-size: 15px; font-weight: 500; color: var(--text-primary); }
+
+        footer {
+            text-align: center;
+            padding: 40px 24px;
+            border-top: 1px solid var(--border-color);
+            margin-top: 60px;
+        }
+
+        footer p { font-size: 13px; color: var(--text-tertiary); }
+        footer .secret { margin-top: 8px; font-size: 12px; opacity: 0.5; }
+
+        @media (max-width: 768px) {
+            .article-title { font-size: 28px; }
+            .article-content { font-size: 16px; }
+            .post-navigation { flex-direction: column; }
+            .post-nav-link.next { text-align: left; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="nav-content">
+            <a href="../index.html" class="back-link">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+                Back to home
+            </a>
+            <a href="../index.html" class="logo">SumMi</a>
+        </div>
+    </nav>
+
+    <article class="article-container">
+
+        <header class="article-header">
+            <div class="article-meta">
+                <span class="article-date">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    November 12, 2024
+                </span>
+                <span>·</span>
+                <span>10 min read</span>
+            </div>
+            <h1 class="article-title">RAG vs Fine-tuning: When to Use What</h1>
+            <p class="article-subtitle">Comparing retrieval-augmented generation with fine-tuning. Practical considerations for real-world AI applications.</p>
+            <div style="display: flex; gap: 8px; margin-top: 20px;">
+                <span class="tag">rag</span>
+                <span class="tag">architecture</span>
+                <span class="tag">llm</span>
+            </div>
+        </header>
+
+        <div class="article-content">
+
+            <p>One of the most common questions when building LLM-powered applications is: "Should I use RAG or fine-tune the model?" The answer, as with most things in engineering, is "it depends." Let's break down when to use each approach.</p>
+
+            <h2>Understanding the Approaches</h2>
+
+            <h3>Retrieval-Augmented Generation (RAG)</h3>
+
+            <p>RAG enhances the model's responses by retrieving relevant information from an external knowledge base at inference time. The retrieved context is included in the prompt, giving the model access to up-to-date or domain-specific information.</p>
+
+            <div class="comparison-card">
+                <h4>✅ RAG Advantages</h4>
+                <ul>
+                    <li><strong>No training required</strong> — Quick to implement and iterate</li>
+                    <li><strong>Always up-to-date</strong> — Knowledge base can be updated independently</li>
+                    <li><strong>Traceable</strong> — You can cite sources and verify information</li>
+                    <li><strong>Cost effective</strong> — No GPU compute for training</li>
+                </ul>
+            </div>
+
+            <h3>Fine-tuning</h3>
+
+            <p>Fine-tuning modifies the model's weights to internalize new knowledge or behaviors. The model learns to generate outputs in a specific style or with specialized knowledge.</p>
+
+            <div class="comparison-card">
+                <h4>✅ Fine-tuning Advantages</h4>
+                <ul>
+                    <li><strong>Internalized knowledge</strong> — Faster inference, no retrieval latency</li>
+                    <li><strong>Style control</strong> — Change how the model writes and responds</li>
+                    <li><strong>Complex reasoning</strong> — Can learn domain-specific reasoning patterns</li>
+                    <li><strong>Smaller context</strong> — No need to fit retrieved docs in prompt</li>
+                </ul>
+            </div>
+
+            <h2>Decision Framework</h2>
+
+            <p>Here's how I think about choosing between RAG and fine-tuning:</p>
+
+            <div class="decision-flow">
+                <p><strong>Is the knowledge factual and frequently changing?</strong></p>
+                <p>→ Yes: Use <strong>RAG</strong></p>
+                <p>→ No: Continue ↓</p>
+                <hr style="margin: 16px 0; opacity: 0.3;">
+                <p><strong>Do you need to change the model's style or behavior?</strong></p>
+                <p>→ Yes: Use <strong>Fine-tuning</strong></p>
+                <p>→ No: Continue ↓</p>
+                <hr style="margin: 16px 0; opacity: 0.3;">
+                <p><strong>Is retrieval latency acceptable?</strong></p>
+                <p>→ Yes: Use <strong>RAG</strong> (simpler)</p>
+                <p>→ No: Use <strong>Fine-tuning</strong></p>
+            </div>
+
+            <h2>Real-World Examples</h2>
+
+            <h3>Use RAG for:</h3>
+            <ul>
+                <li><strong>Customer support bots</strong> — Product info changes frequently</li>
+                <li><strong>Documentation Q&A</strong> — Need to cite exact sources</li>
+                <li><strong>Legal/medical assistants</strong> — Accuracy and traceability critical</li>
+                <li><strong>News analysis</strong> — Information is constantly updated</li>
+            </ul>
+
+            <h3>Use Fine-tuning for:</h3>
+            <ul>
+                <li><strong>Code assistants</strong> — Learn company coding patterns</li>
+                <li><strong>Writing tools</strong> — Match specific brand voice</li>
+                <li><strong>Classification tasks</strong> — Specialized categorization</li>
+                <li><strong>Domain experts</strong> — Deep reasoning in specific fields</li>
+            </ul>
+
+            <h2>The Hybrid Approach</h2>
+
+            <p>In practice, the best systems often combine both:</p>
+
+            <blockquote>
+                Fine-tune for behavior and style, RAG for knowledge.
+            </blockquote>
+
+            <p>For example, you might fine-tune a model to respond in your brand's voice and follow your response format, while using RAG to provide accurate, up-to-date product information.</p>
+
+            <hr>
+
+            <h2>Key Takeaways</h2>
+
+            <ol>
+                <li><strong>RAG for facts</strong> — When accuracy and freshness matter most</li>
+                <li><strong>Fine-tuning for behavior</strong> — When you need consistent style or specialized reasoning</li>
+                <li><strong>Combine wisely</strong> — Many production systems use both</li>
+                <li><strong>Start with RAG</strong> — It's easier to iterate and debug</li>
+            </ol>
+
+            <p>The LLM landscape is evolving rapidly. What works today might not be optimal tomorrow. Stay flexible, measure your results, and choose the approach that best serves your users.</p>
+
+        </div>
+
+        <footer class="article-footer">
+
+            <div class="author-card">
+                <div class="author-avatar">✦</div>
+                <div class="author-info">
+                    <h4>SumMi</h4>
+                    <p>AI enthusiast exploring the boundaries of machine intelligence.</p>
+                </div>
+            </div>
+
+            <div class="post-navigation">
+                <a href="llm-fine-tuning.html" class="post-nav-link prev">
+                    <div class="post-nav-label">← Previous</div>
+                    <div class="post-nav-title">Fine-tuning LLMs: A Practical Guide</div>
+                </a>
+                <a href="#" class="post-nav-link next" style="visibility: hidden;">
+                    <div class="post-nav-label">Next →</div>
+                    <div class="post-nav-title">Coming Soon</div>
+                </a>
+            </div>
+
+        </footer>
+
+    </article>
+
+    <footer>
+        <p>© 2024 SumMi · Exploring AI</p>
+        <p class="secret">Loving you is a lonely secret.</p>
+    </footer>
+
+</body>
+</html>
