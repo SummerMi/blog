@@ -124,7 +124,7 @@ function markdownToHtml(markdown) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// 文章页面模板
+// 文章页面模板（含阅读进度条、代码复制、评论系统）
 // ═══════════════════════════════════════════════════════════════════════════
 
 function generateArticlePage(metadata, content) {
@@ -159,6 +159,7 @@ function generateArticlePage(metadata, content) {
             --card-bg: rgba(255, 255, 255, 0.8);
             --code-bg: #f6f8fa;
             --blur: 20px;
+            --accent-color: #0d0d0d;
         }
 
         @media (prefers-color-scheme: dark) {
@@ -172,6 +173,7 @@ function generateArticlePage(metadata, content) {
                 --border-color: #2a2a2a;
                 --card-bg: rgba(26, 26, 26, 0.8);
                 --code-bg: #1e1e1e;
+                --accent-color: #ffffff;
             }
         }
 
@@ -181,6 +183,20 @@ function generateArticlePage(metadata, content) {
             color: var(--text-primary);
             line-height: 1.8;
             min-height: 100vh;
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           阅读进度条
+           ═══════════════════════════════════════════════════════════ */
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 0%;
+            height: 3px;
+            background: var(--accent-color);
+            z-index: 1000;
+            transition: width 0.1s ease-out;
         }
 
         nav {
@@ -291,7 +307,68 @@ function generateArticlePage(metadata, content) {
             border-radius: 4px;
         }
 
-        .article-content pre {
+        /* ═══════════════════════════════════════════════════════════
+           代码块 + 复制按钮
+           ═══════════════════════════════════════════════════════════ */
+        .code-block {
+            position: relative;
+            margin: 24px 0;
+        }
+
+        .code-block pre {
+            margin: 0;
+            padding: 20px;
+            padding-top: 40px;
+            background: var(--code-bg);
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        .code-block pre code {
+            padding: 0;
+            background: none;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .code-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: var(--bg-tertiary);
+            border-radius: 8px 8px 0 0;
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        .copy-btn {
+            padding: 4px 10px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .copy-btn.copied {
+            background: #10b981;
+            color: white;
+            border-color: #10b981;
+        }
+
+        .article-content > pre {
             margin: 24px 0;
             padding: 20px;
             background: var(--code-bg);
@@ -299,7 +376,7 @@ function generateArticlePage(metadata, content) {
             overflow-x: auto;
         }
 
-        .article-content pre code {
+        .article-content > pre code {
             padding: 0;
             background: none;
             font-size: 14px;
@@ -341,6 +418,22 @@ function generateArticlePage(metadata, content) {
         .author-info h4 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
         .author-info p { font-size: 14px; color: var(--text-secondary); }
 
+        /* ═══════════════════════════════════════════════════════════
+           评论区域
+           ═══════════════════════════════════════════════════════════ */
+        .comments-section {
+            margin-top: 48px;
+            padding-top: 32px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .comments-section h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: var(--text-primary);
+        }
+
         footer {
             text-align: center;
             padding: 40px 24px;
@@ -358,6 +451,9 @@ function generateArticlePage(metadata, content) {
     </style>
 </head>
 <body>
+
+    <!-- 阅读进度条 -->
+    <div class="progress-bar" id="progressBar"></div>
 
     <nav>
         <div class="nav-content">
@@ -381,7 +477,7 @@ function generateArticlePage(metadata, content) {
             <div class="article-tags">${tags}</div>
         </header>
 
-        <div class="article-content">
+        <div class="article-content" id="articleContent">
             ${content}
         </div>
 
@@ -393,6 +489,32 @@ function generateArticlePage(metadata, content) {
                     <p>AI enthusiast exploring the boundaries of machine intelligence.</p>
                 </div>
             </div>
+
+            <!-- 评论系统 (Giscus) -->
+            <div class="comments-section">
+                <h3>Comments</h3>
+                <script src="https://giscus.app/client.js"
+                    data-repo="SummerMi/blog"
+                    data-repo-id=""
+                    data-category="General"
+                    data-category-id=""
+                    data-mapping="pathname"
+                    data-strict="0"
+                    data-reactions-enabled="1"
+                    data-emit-metadata="0"
+                    data-input-position="top"
+                    data-theme="preferred_color_scheme"
+                    data-lang="en"
+                    data-loading="lazy"
+                    crossorigin="anonymous"
+                    async>
+                </script>
+                <noscript>
+                    <p style="color: var(--text-tertiary); font-size: 14px;">
+                        Enable JavaScript to view comments.
+                    </p>
+                </noscript>
+            </div>
         </footer>
     </article>
 
@@ -400,6 +522,77 @@ function generateArticlePage(metadata, content) {
         <p>© 2024 SumMi · Exploring AI</p>
         <p class="secret">Loving you is a lonely secret.</p>
     </footer>
+
+    <script>
+        // ═══════════════════════════════════════════════════════════
+        // 阅读进度条
+        // ═══════════════════════════════════════════════════════════
+        const progressBar = document.getElementById('progressBar');
+
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.scrollY;
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const progress = (scrollTop / docHeight) * 100;
+            progressBar.style.width = progress + '%';
+        });
+
+        // ═══════════════════════════════════════════════════════════
+        // 代码复制按钮
+        // ═══════════════════════════════════════════════════════════
+        document.querySelectorAll('pre code').forEach((codeBlock, index) => {
+            const pre = codeBlock.parentElement;
+
+            // 检查是否已经被包装
+            if (pre.parentElement.classList.contains('code-block')) return;
+
+            // 获取语言
+            const className = codeBlock.className || '';
+            const langMatch = className.match(/language-(\\w+)/);
+            const lang = langMatch ? langMatch[1] : 'code';
+
+            // 创建包装器
+            const wrapper = document.createElement('div');
+            wrapper.className = 'code-block';
+
+            // 创建头部
+            const header = document.createElement('div');
+            header.className = 'code-header';
+            header.innerHTML = \`
+                <span>\${lang}</span>
+                <button class="copy-btn" data-index="\${index}">Copy</button>
+            \`;
+
+            // 包装
+            pre.parentNode.insertBefore(wrapper, pre);
+            wrapper.appendChild(header);
+            wrapper.appendChild(pre);
+        });
+
+        // 复制功能
+        document.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('copy-btn')) {
+                const btn = e.target;
+                const codeBlock = btn.closest('.code-block');
+                const code = codeBlock.querySelector('code').textContent;
+
+                try {
+                    await navigator.clipboard.writeText(code);
+                    btn.textContent = 'Copied!';
+                    btn.classList.add('copied');
+
+                    setTimeout(() => {
+                        btn.textContent = 'Copy';
+                        btn.classList.remove('copied');
+                    }, 2000);
+                } catch (err) {
+                    btn.textContent = 'Failed';
+                    setTimeout(() => {
+                        btn.textContent = 'Copy';
+                    }, 2000);
+                }
+            }
+        });
+    </script>
 
 </body>
 </html>`;
