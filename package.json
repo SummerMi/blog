@@ -1,0 +1,11 @@
+{
+  "name": "summi-blog",
+  "version": "1.0.0",
+  "description": "SumMi's personal AI blog",
+  "scripts": {
+    "build": "node build.js",
+    "new": "node scripts/new-post.js"
+  },
+  "author": "SumMi",
+  "license": "MIT"
+}

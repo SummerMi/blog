@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RAG vs Fine-tuning: When to Use What · SumMi</title>
+    <title>Fine-tuning LLMs: A Practical Guide · SumMi</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -233,70 +233,77 @@
     <article class="article-container">
         <header class="article-header">
             <div class="article-meta">
-                <span>November 11, 2024</span>
+                <span>November 18, 2024</span>
             </div>
-            <h1 class="article-title">RAG vs Fine-tuning: When to Use What</h1>
-            <p class="article-subtitle">Comparing retrieval-augmented generation with fine-tuning. Practical considerations for real-world AI applications.</p>
-            <div class="article-tags"><span class="tag">rag</span><span class="tag">architecture</span><span class="tag">llm</span></div>
+            <h1 class="article-title">Fine-tuning LLMs: A Practical Guide</h1>
+            <p class="article-subtitle">Everything I learned about LoRA, QLoRA, and efficient fine-tuning techniques for large language models.</p>
+            <div class="article-tags"><span class="tag">llm</span><span class="tag">tutorial</span><span class="tag">fine-tuning</span></div>
         </header>
 
         <div class="article-content">
-            <p>One of the most common questions when building LLM-powered applications is: "Should I use RAG or fine-tune the model?" The answer, as with most things in engineering, is "it depends."</p>
+            <p>Fine-tuning large language models has become significantly more accessible thanks to parameter-efficient techniques. In this guide, I'll share practical insights from my experience fine-tuning models ranging from 7B to 70B parameters.</p>
 
-<h2>Understanding the Approaches</h2>
+<h2>Why Fine-tune?</h2>
 
-<h3>Retrieval-Augmented Generation (RAG)</h3>
+<p>While pre-trained models like GPT-4 or Claude are incredibly capable, fine-tuning offers several advantages:</p>
 
-<p>RAG enhances the model's responses by retrieving relevant information from an external knowledge base at inference time. The retrieved context is included in the prompt.</p>
-
-<strong>Advantages:</strong>
-<ul><li>No training required — Quick to implement</li>
-<li>Always up-to-date — Knowledge base can be updated independently</li>
-<li>Traceable — You can cite sources</li>
-<li>Cost effective — No GPU compute for training</li>
+<ul><li><strong>Domain expertise</strong> — Teach the model specialized knowledge</li>
+<li><strong>Style control</strong> — Make outputs match your desired tone and format</li>
+<li><strong>Cost efficiency</strong> — Smaller fine-tuned models can outperform larger general ones</li>
+<li><strong>Privacy</strong> — Keep sensitive data in-house</li>
 </ul>
-<h3>Fine-tuning</h3>
+<h2>Full Fine-tuning vs. Parameter-Efficient Methods</h2>
 
-<p>Fine-tuning modifies the model's weights to internalize new knowledge or behaviors.</p>
+<p>The traditional approach updates all model parameters, but this requires massive compute resources. Modern techniques update only a tiny fraction of parameters while achieving similar results.</p>
 
-<strong>Advantages:</strong>
-<ul><li>Internalized knowledge — Faster inference</li>
-<li>Style control — Change how the model writes</li>
-<li>Complex reasoning — Can learn domain-specific patterns</li>
-<li>Smaller context — No need to fit retrieved docs in prompt</li>
+<h2>Understanding LoRA</h2>
+
+<strong>Low-Rank Adaptation (LoRA)</strong> works by freezing the pre-trained weights and injecting trainable low-rank matrices into each layer.
+
+<p>The key insight is that the weight updates during fine-tuning have low "intrinsic rank" — meaning they can be approximated by much smaller matrices.</p>
+
+<blockquote>"We hypothesize that the change in weights during model adaptation also has a low 'intrinsic rank'."<br>— Hu et al., LoRA paper</blockquote>
+
+<h3>Key Parameters</h3>
+
+<ul><li><code>r</code> (rank) — Dimension of the low-rank matrices. Higher = more capacity but more memory. Start with 8-16.</li>
+<li><code>alpha</code> — Scaling factor. Common practice: set to 2x rank.</li>
+<li><code>target_modules</code> — Which layers to apply LoRA. Usually attention layers.</li>
 </ul>
-<h2>Decision Framework</h2>
+<h2>Practical Implementation</h2>
 
-<p>Here's how I think about choosing:</p>
+<p>Here's a minimal example using the <code>peft</code> library:</p>
 
-<strong>Is the knowledge factual and frequently changing?</strong>
-→ Use RAG
+<pre><code class="language-python">from peft import LoraConfig, get_peft_model
+from transformers import AutoModelForCausalLM
 
-<strong>Do you need to change the model's style or behavior?</strong>
-→ Use Fine-tuning
+<h1>Load base model</h1>
+model = AutoModelForCausalLM.from_pretrained(
+    "meta-llama/Llama-2-7b-hf",
+    torch_dtype=torch.float16,
+    device_map="auto"
+)
 
-<strong>Is retrieval latency acceptable?</strong>
-→ Use RAG (simpler)
+<h1>Configure LoRA</h1>
+lora_config = LoraConfig(
+    r=16,
+    lora_alpha=32,
+    target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+    lora_dropout=0.05,
+    bias="none",
+    task_type="CAUSAL_LM"
+)
 
-<h2>Real-World Examples</h2>
+<h1>Apply LoRA</h1>
+model = get_peft_model(model, lora_config)</code></pre>
 
-<h3>Use RAG for:</h3>
-<ul><li>Customer support bots — Product info changes frequently</li>
-<li>Documentation Q&A — Need to cite exact sources</li>
-<li>Legal/medical assistants — Accuracy critical</li>
-</ul>
-<h3>Use Fine-tuning for:</h3>
-<ul><li>Code assistants — Learn company coding patterns</li>
-<li>Writing tools — Match specific brand voice</li>
-<li>Classification tasks — Specialized categorization</li>
-</ul>
-<h2>The Hybrid Approach</h2>
+<h2>Tips from Experience</h2>
 
-<p>In practice, the best systems often combine both:</p>
-
-<blockquote>Fine-tune for behavior and style, RAG for knowledge.</blockquote>
-
-<p>You might fine-tune a model to respond in your brand's voice, while using RAG to provide accurate product information.</p>
+<li><strong>Data quality > quantity</strong> — 1000 high-quality examples often beat 10000 noisy ones</li>
+<li><strong>Start small</strong> — Prototype with a 7B model before scaling up</li>
+<li><strong>Learning rate matters</strong> — Use 1e-4 to 2e-4 for LoRA</li>
+<li><strong>Monitor loss carefully</strong> — Overfitting happens fast with small datasets</li>
+<li><strong>Evaluate on real tasks</strong> — Loss alone doesn't tell the full story</li>
         </div>
 
         <footer class="article-footer">
