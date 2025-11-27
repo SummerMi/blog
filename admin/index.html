@@ -1,12 +1,628 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="robots" content="noindex" />
-    <title>SumMi Blog - Admin</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>SumMi Blog - 后台管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f7f7f8;
+            --text-primary: #0d0d0d;
+            --text-secondary: #6e6e80;
+            --border-color: #e5e5e5;
+            --accent: #0d0d0d;
+            --success: #10b981;
+            --error: #ef4444;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-primary: #0d0d0d;
+                --bg-secondary: #1a1a1a;
+                --text-primary: #ececec;
+                --text-secondary: #9a9a9a;
+                --border-color: #2a2a2a;
+                --accent: #ffffff;
+            }
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        /* Login Section */
+        .login-section {
+            max-width: 400px;
+            margin: 100px auto;
+            text-align: center;
+        }
+
+        .login-section h2 {
+            margin-bottom: 12px;
+        }
+
+        .login-section p {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+
+        .login-section a {
+            color: var(--accent);
+        }
+
+        /* Forms */
+        input, textarea, select {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 14px;
+            font-family: inherit;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, textarea:focus {
+            border-color: var(--text-secondary);
+        }
+
+        textarea {
+            min-height: 400px;
+            resize: vertical;
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.7;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 500;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .btn:hover {
+            opacity: 0.85;
+        }
+
+        .btn-primary {
+            background: var(--text-primary);
+            color: var(--bg-primary);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-danger {
+            background: var(--error);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        /* Article List */
+        .article-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            background: var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .article-item {
+            background: var(--bg-primary);
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .article-item:hover {
+            background: var(--bg-secondary);
+        }
+
+        .article-info h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .article-info p {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .article-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* Editor */
+        .editor-section {
+            display: none;
+        }
+
+        .editor-section.active {
+            display: block;
+        }
+
+        .editor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .editor-header h2 {
+            font-size: 20px;
+        }
+
+        /* Messages */
+        .message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .message.success {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        .message.error {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--error);
+            border: 1px solid var(--error);
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        /* Hidden */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Preview */
+        .preview-toggle {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .preview-toggle button {
+            padding: 8px 16px;
+            font-size: 13px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            color: var(--text-primary);
+        }
+
+        .preview-toggle button.active {
+            background: var(--text-primary);
+            color: var(--bg-primary);
+            border-color: var(--text-primary);
+        }
+
+        .preview-content {
+            padding: 20px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            min-height: 400px;
+        }
+
+        .preview-content h1, .preview-content h2, .preview-content h3 {
+            margin: 20px 0 10px;
+        }
+
+        .preview-content p {
+            margin: 10px 0;
+        }
+
+        .preview-content code {
+            background: var(--bg-primary);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .preview-content pre {
+            background: var(--bg-primary);
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+    </style>
 </head>
 <body>
-    <script src="https://cdn.jsdelivr.net/npm/decap-cms@3.1.3/dist/decap-cms.min.js"></script>
+    <div class="container">
+        <!-- Login Section -->
+        <div id="loginSection" class="login-section">
+            <h2>🔐 登录后台</h2>
+            <p>
+                需要 GitHub Personal Access Token<br>
+                <a href="https://github.com/settings/tokens/new?description=blog-admin&scopes=repo" target="_blank">点击这里创建 Token</a>（勾选 repo 权限）
+            </p>
+            <div class="form-group">
+                <input type="password" id="tokenInput" placeholder="粘贴你的 GitHub Token...">
+            </div>
+            <button class="btn btn-primary" onclick="login()">登录</button>
+        </div>
+
+        <!-- Main Section -->
+        <div id="mainSection" class="hidden">
+            <header>
+                <h1>📝 文章管理</h1>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="showEditor()">+ 新建文章</button>
+                    <button class="btn btn-secondary" onclick="logout()">退出</button>
+                </div>
+            </header>
+
+            <div id="message"></div>
+
+            <!-- Article List -->
+            <div id="listSection">
+                <div id="articleList" class="article-list">
+                    <div class="loading">加载中...</div>
+                </div>
+            </div>
+
+            <!-- Editor Section -->
+            <div id="editorSection" class="editor-section">
+                <div class="editor-header">
+                    <h2 id="editorTitle">新建文章</h2>
+                    <button class="btn btn-secondary" onclick="hideEditor()">← 返回列表</button>
+                </div>
+
+                <div class="form-group">
+                    <label>标题</label>
+                    <input type="text" id="articleTitle" placeholder="文章标题">
+                </div>
+
+                <div class="form-group">
+                    <label>描述</label>
+                    <input type="text" id="articleDesc" placeholder="简短描述，显示在首页列表">
+                </div>
+
+                <div class="form-group">
+                    <label>标签（用逗号分隔）</label>
+                    <input type="text" id="articleTags" placeholder="AI, tutorial, deep-learning">
+                </div>
+
+                <div class="form-group">
+                    <label>正文（Markdown 格式）</label>
+                    <div class="preview-toggle">
+                        <button id="editBtn" class="active" onclick="showEdit()">编辑</button>
+                        <button id="previewBtn" onclick="showPreview()">预览</button>
+                    </div>
+                    <textarea id="articleContent" placeholder="在这里写文章内容，支持 Markdown 语法..."></textarea>
+                    <div id="previewContent" class="preview-content hidden"></div>
+                </div>
+
+                <div style="display: flex; gap: 12px;">
+                    <button class="btn btn-success" onclick="saveArticle()">💾 保存并发布</button>
+                    <button id="deleteBtn" class="btn btn-danger hidden" onclick="deleteArticle()">🗑️ 删除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Markdown Parser -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <script>
+        const REPO = 'SummerMi/blog';
+        const BRANCH = 'main';
+        const CONTENT_PATH = 'content';
+
+        let token = '';
+        let articles = [];
+        let currentFile = null;
+
+        // Check saved token
+        window.onload = function() {
+            const savedToken = localStorage.getItem('github_token');
+            if (savedToken) {
+                token = savedToken;
+                showMain();
+                loadArticles();
+            }
+        };
+
+        function login() {
+            token = document.getElementById('tokenInput').value.trim();
+            if (!token) {
+                alert('请输入 Token');
+                return;
+            }
+            localStorage.setItem('github_token', token);
+            showMain();
+            loadArticles();
+        }
+
+        function logout() {
+            localStorage.removeItem('github_token');
+            token = '';
+            location.reload();
+        }
+
+        function showMain() {
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('mainSection').classList.remove('hidden');
+        }
+
+        function showMessage(text, type) {
+            const el = document.getElementById('message');
+            el.innerHTML = `<div class="message ${type}">${text}</div>`;
+            setTimeout(() => el.innerHTML = '', 5000);
+        }
+
+        // GitHub API
+        async function githubAPI(endpoint, options = {}) {
+            const res = await fetch(`https://api.github.com${endpoint}`, {
+                ...options,
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    ...options.headers
+                }
+            });
+            if (!res.ok) {
+                if (res.status === 401) {
+                    logout();
+                    throw new Error('Token 无效，请重新登录');
+                }
+                throw new Error(`GitHub API 错误: ${res.status}`);
+            }
+            return res.json();
+        }
+
+        // Load articles
+        async function loadArticles() {
+            try {
+                const data = await githubAPI(`/repos/${REPO}/contents/${CONTENT_PATH}?ref=${BRANCH}`);
+                articles = data.filter(f => f.name.endsWith('.md'));
+                renderArticleList();
+            } catch (e) {
+                showMessage(e.message, 'error');
+            }
+        }
+
+        function renderArticleList() {
+            const list = document.getElementById('articleList');
+            if (articles.length === 0) {
+                list.innerHTML = '<div class="loading">暂无文章，点击上方"新建文章"开始写作</div>';
+                return;
+            }
+            list.innerHTML = articles.map(a => `
+                <div class="article-item" onclick="editArticle('${a.path}', '${a.sha}')">
+                    <div class="article-info">
+                        <h3>${a.name.replace('.md', '')}</h3>
+                        <p>点击编辑</p>
+                    </div>
+                    <div class="article-actions">
+                        <button class="btn btn-secondary" onclick="event.stopPropagation(); editArticle('${a.path}', '${a.sha}')">编辑</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Editor
+        function showEditor(isNew = true) {
+            document.getElementById('listSection').classList.add('hidden');
+            document.getElementById('editorSection').classList.add('active');
+            document.getElementById('editorTitle').textContent = isNew ? '新建文章' : '编辑文章';
+            document.getElementById('deleteBtn').classList.toggle('hidden', isNew);
+
+            if (isNew) {
+                currentFile = null;
+                document.getElementById('articleTitle').value = '';
+                document.getElementById('articleDesc').value = '';
+                document.getElementById('articleTags').value = 'AI';
+                document.getElementById('articleContent').value = '';
+            }
+        }
+
+        function hideEditor() {
+            document.getElementById('listSection').classList.remove('hidden');
+            document.getElementById('editorSection').classList.remove('active');
+            currentFile = null;
+        }
+
+        async function editArticle(path, sha) {
+            try {
+                const data = await githubAPI(`/repos/${REPO}/contents/${path}?ref=${BRANCH}`);
+                const content = atob(data.content);
+
+                // Parse frontmatter
+                const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+                if (match) {
+                    const frontmatter = match[1];
+                    const body = match[2];
+
+                    const title = frontmatter.match(/title:\s*(.+)/)?.[1] || '';
+                    const desc = frontmatter.match(/description:\s*(.+)/)?.[1] || '';
+                    const tagsMatch = frontmatter.match(/tags:\s*\[([^\]]+)\]/);
+                    const tags = tagsMatch ? tagsMatch[1] : '';
+
+                    document.getElementById('articleTitle').value = title;
+                    document.getElementById('articleDesc').value = desc;
+                    document.getElementById('articleTags').value = tags;
+                    document.getElementById('articleContent').value = body.trim();
+                }
+
+                currentFile = { path, sha };
+                showEditor(false);
+            } catch (e) {
+                showMessage(e.message, 'error');
+            }
+        }
+
+        async function saveArticle() {
+            const title = document.getElementById('articleTitle').value.trim();
+            const desc = document.getElementById('articleDesc').value.trim();
+            const tags = document.getElementById('articleTags').value.trim();
+            const content = document.getElementById('articleContent').value.trim();
+
+            if (!title || !content) {
+                showMessage('标题和正文不能为空', 'error');
+                return;
+            }
+
+            const date = new Date().toISOString().split('T')[0];
+            const slug = title.toLowerCase()
+                .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-')
+                .replace(/^-|-$/g, '');
+
+            const filename = currentFile ? currentFile.path : `${CONTENT_PATH}/${slug}.md`;
+
+            const fileContent = `---
+title: ${title}
+date: ${date}
+description: ${desc}
+tags: [${tags}]
+---
+
+${content}
+`;
+
+            try {
+                const body = {
+                    message: currentFile ? `Update: ${title}` : `Add: ${title}`,
+                    content: btoa(unescape(encodeURIComponent(fileContent))),
+                    branch: BRANCH
+                };
+
+                if (currentFile) {
+                    body.sha = currentFile.sha;
+                }
+
+                await githubAPI(`/repos/${REPO}/contents/${filename}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(body)
+                });
+
+                showMessage('✅ 保存成功！Vercel 将自动部署更新', 'success');
+                hideEditor();
+                loadArticles();
+            } catch (e) {
+                showMessage(e.message, 'error');
+            }
+        }
+
+        async function deleteArticle() {
+            if (!currentFile) return;
+            if (!confirm('确定要删除这篇文章吗？')) return;
+
+            try {
+                await githubAPI(`/repos/${REPO}/contents/${currentFile.path}`, {
+                    method: 'DELETE',
+                    body: JSON.stringify({
+                        message: `Delete: ${currentFile.path}`,
+                        sha: currentFile.sha,
+                        branch: BRANCH
+                    })
+                });
+
+                showMessage('✅ 删除成功', 'success');
+                hideEditor();
+                loadArticles();
+            } catch (e) {
+                showMessage(e.message, 'error');
+            }
+        }
+
+        // Preview
+        function showEdit() {
+            document.getElementById('editBtn').classList.add('active');
+            document.getElementById('previewBtn').classList.remove('active');
+            document.getElementById('articleContent').classList.remove('hidden');
+            document.getElementById('previewContent').classList.add('hidden');
+        }
+
+        function showPreview() {
+            document.getElementById('editBtn').classList.remove('active');
+            document.getElementById('previewBtn').classList.add('active');
+            document.getElementById('articleContent').classList.add('hidden');
+            document.getElementById('previewContent').classList.remove('hidden');
+
+            const content = document.getElementById('articleContent').value;
+            document.getElementById('previewContent').innerHTML = marked.parse(content);
+        }
+    </script>
 </body>
 </html>
